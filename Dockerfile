@@ -28,4 +28,4 @@ EXPOSE 7000
 
 # --- จุดสำคัญ: วิธีการรัน ---
 # เราอยู่ที่ /app ดังนั้นต้องเรียกไฟล์ที่อยู่ในโฟลเดอร์ server
-CMD ["node", "server/server.js"]
+CMD ["node", "server/index.js"]
