@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: mern-app
-        image: yourdockerhub/mern-app:latest
+        image: junjanctl/mern-app:latest
         ports:
         - containerPort: 7000
         env:
