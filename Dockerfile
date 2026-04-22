@@ -2,34 +2,30 @@
 FROM node:20-alpine AS client-build
 WORKDIR /app
 
-# 1. ก๊อปปี้ทุกอย่างจาก root เครื่องคุณ เข้าไปใน container ให้หมดก่อน
+# ก๊อปปี้ไฟล์ทั้งหมด (รวมถึงโฟลเดอร์ client และ server)
 COPY . .
 
-# 2. ตรวจสอบไฟล์ (ถ้ามัน Error อีก ให้คุณไปดูใน Console Output ของ Jenkins จะเห็นรายชื่อไฟล์)
-RUN ls -R
-
-# 3. ลองรัน npm install โดยระบุ path ตรงๆ ไม่ต้องสลับ WORKDIR ไปมา
-RUN cd client && npm install
-
-# 4. Build React
-RUN cd client && npm run build
+# ติดตั้ง dependencies และ build frontend
+RUN cd client && npm install && npm run build
 
 
 # ---------- Stage 2: Final Image ----------
 FROM node:20-alpine
 WORKDIR /app
 
-# ก๊อปปี้ทุกอย่างกลับมา
-COPY . .
+# 1. ก๊อปปี้โฟลเดอร์ server มาไว้ที่ /app/server
+COPY server/ ./server/
 
-# จัดการ Server
-RUN cd server && npm install --omit=dev
-
-# ก๊อปปี้ไฟล์ที่ Build เสร็จจาก Stage แรก
+# 2. ก๊อปปี้ไฟล์ที่ Build เสร็จจาก Stage แรก มาไว้ที่ /app/client/build
 COPY --from=client-build /app/client/build ./client/build
 
+# 3. ติดตั้ง server dependencies
+RUN cd server && npm install --omit=dev
+
+# ตั้งค่า Environment
 ENV PORT=7000
 EXPOSE 7000
 
-# ตรวจสอบว่าไฟล์ server.js อยู่ที่ไหน (สมมติว่าอยู่ใน /app/server/server.js)
+# --- จุดสำคัญ: วิธีการรัน ---
+# เราอยู่ที่ /app ดังนั้นต้องเรียกไฟล์ที่อยู่ในโฟลเดอร์ server
 CMD ["node", "server/server.js"]
