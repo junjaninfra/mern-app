@@ -1,42 +1,35 @@
-# ---------- Stage 1: Build React (Frontend) ----------
+# ---------- Stage 1: Build React ----------
 FROM node:20-alpine AS client-build
-# กำหนดจุดทำงานหลักที่ /app
 WORKDIR /app
 
-# ก๊อปปี้ package.json โดยระบุ path จาก root ของโปรเจกต์
-# (ตรวจสอบให้แน่ใจว่าชื่อโฟลเดอร์ client เป็นตัวเล็กทั้งหมดตรงตามเครื่อง)
-COPY client/package*.json ./client/
+# 1. ก๊อปปี้ทุกอย่างจาก root เครื่องคุณ เข้าไปใน container ให้หมดก่อน
+COPY . .
 
-# ย้ายเข้าไปรัน npm install ในโฟลเดอร์ client
-WORKDIR /app/client
-RUN npm install
+# 2. ตรวจสอบไฟล์ (ถ้ามัน Error อีก ให้คุณไปดูใน Console Output ของ Jenkins จะเห็นรายชื่อไฟล์)
+RUN ls -R
 
-# ก๊อปปี้ไฟล์ทั้งหมดของ client เข้าไปเพื่อ build
-COPY client/ ./
-RUN npm run build
+# 3. ลองรัน npm install โดยระบุ path ตรงๆ ไม่ต้องสลับ WORKDIR ไปมา
+RUN cd client && npm install
+
+# 4. Build React
+RUN cd client && npm run build
 
 
-# ---------- Stage 2: Build Server (Backend) & Final Image ----------
+# ---------- Stage 2: Final Image ----------
 FROM node:20-alpine
 WORKDIR /app
 
-# 1. จัดการส่วนของ Server
-COPY server/package*.json ./server/
-# ใช้ --omit=dev แทน --production (แนะนำสำหรับ npm เวอร์ชั่นใหม่)
+# ก๊อปปี้ทุกอย่างกลับมา
+COPY . .
+
+# จัดการ Server
 RUN cd server && npm install --omit=dev
 
-# ก๊อปปี้โค้ด server ทั้งหมดเข้าไป
-COPY server/ ./server/
-
-# 2. ก๊อปปี้ไฟล์ที่ Build เสร็จแล้วจาก Stage แรกมาไว้ที่ Server
-# (ตรวจสอบว่าใน server.js ของคุณเรียกใช้ไฟล์จาก path ไหน)
+# ก๊อปปี้ไฟล์ที่ Build เสร็จจาก Stage แรก
 COPY --from=client-build /app/client/build ./client/build
 
-# ตั้งค่า Environment
 ENV PORT=7000
 EXPOSE 7000
 
-# รัน server (ตรวจสอบว่า server.js อยู่ในโฟลเดอร์ server/ หรือไม่)
-# ถ้า server.js อยู่ในโฟลเดอร์ server ให้ใช้: CMD ["node", "server/server.js"]
-WORKDIR /app/server
-CMD ["node", "server.js"]
+# ตรวจสอบว่าไฟล์ server.js อยู่ที่ไหน (สมมติว่าอยู่ใน /app/server/server.js)
+CMD ["node", "server/server.js"]
